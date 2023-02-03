@@ -1,6 +1,6 @@
 '''data.py
 Reads CSV files, stores data, access/filter data by variable name
-YOUR NAME HERE
+CHANDRACHUD MALALI GOWDA
 CS 251 Data Analysis and Visualization
 Spring 2023
 '''
