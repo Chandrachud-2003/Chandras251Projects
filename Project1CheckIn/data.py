@@ -5,6 +5,7 @@ CS 251 Data Analysis and Visualization
 Spring 2023
 '''
 
+import numpy as np
 
 class Data:
     def __init__(self, filepath=None, headers=None, data=None, header2col=None):
@@ -34,6 +35,17 @@ class Data:
             - Any others you find helpful in your implementation
         - If `filepath` isn't None, call the `read` method.
         '''
+
+        # Declaring the instance variables
+        self.filepath = filepath
+        self.headers = headers
+        self.data = data
+        self.header2col = header2col
+
+        # Checking if the filepath is not None
+        if filepath is not None:
+            self.read(filepath)
+
         pass
 
     def read(self, filepath):
@@ -78,6 +90,56 @@ class Data:
         or check the project website for some guidelines.
         - Check out the test scripts for the desired outputs.
         '''
+
+        # Importing the csv module
+        import csv
+
+        # Opening the file in read mode
+        with open(filepath, 'r') as file:
+            # Reading the file
+            reader = csv.reader(file)
+            # Getting the headers
+            self.headers = next(reader)
+            # Storing the data in a list
+            self.data = list(reader)
+
+        # List to store the columns to delete
+        todelete = []
+
+        # Throw error when reading csv files without type specification in the first row using the isAlpha function
+        if not self.data[0][0].isalpha():
+            raise ValueError("The first row of the csv file should contain the type of the data")
+
+        # Deleting the columns that are not numeric by looking at the first row of data
+        for i in range(len(self.data[0])):
+            if self.data[0][i].strip() != 'numeric':
+                todelete.append(i)
+
+        # Deleting the columns taking into account index switching
+        for i in range(len(todelete)):
+            for row in self.data:
+                del row[todelete[i] - i]
+
+        # Deleting the headers of the columns to delete
+        for i in range(len(todelete)):
+            del self.headers[todelete[i] - i]
+
+
+        # Storing the headers in a dictionary
+        self.header2col = {self.headers[i]: i for i in range(len(self.headers))}
+
+        # Skipping the first row of data
+        self.data = self.data[1:]
+
+        # Converting the data to float
+        for i in range(len(self.data)):
+            for j in range(len(self.data[i])):
+                self.data[i][j] = float(self.data[i][j])
+
+        
+        # Converting the data to numpy array
+        self.data = np.array(self.data)
+
         pass
 
     def __str__(self):
@@ -92,7 +154,42 @@ class Data:
             Only show, at most, the 1st 5 rows of data
             See the test code for an example output.
         '''
-        pass
+
+        # Prints output in this format:
+#         data/iris.csv (150x4)
+# Headers:
+#   sepal_length    sepal_width    petal_length    petal_width
+# -------------------------------
+# Showing first 5/150 rows.
+# 5.1    3.5    1.4    0.2
+# 4.9    3.0    1.4    0.2
+# 4.7    3.2    1.3    0.2
+# 4.6    3.1    1.5    0.2
+# 5.0    3.6    1.4    0.2
+
+        # Declaring the output string
+        output = ''
+
+        # Adding the file path and the dimensions of the data
+        output += self.filepath + ' (' + str(len(self.data)) + 'x' + str(len(self.headers)) + ')\n'
+        # Adding the headers
+        output += 'Headers:\n'
+        for header in self.headers:
+            output += '  ' + header + '\t'
+        output += '\n'
+        # Adding the separator
+        output += '-----------------------\n'
+        # Adding the number of rows to show if the rows >= 5
+        if len(self.data) >= 5:
+            output += 'Showing first 5/' + str(len(self.data)) + ' rows.\n'
+        # Adding the data
+        for i in range(min(len(self.data), 5)):
+            for j in range(len(self.data[i])):
+                output += str(self.data[i][j]) + '\t'
+            output += '\n'
+
+        # Returning the output
+        return output
 
     def get_headers(self):
         '''Get method for headers
@@ -101,6 +198,10 @@ class Data:
         -----------
         Python list of str.
         '''
+
+        # Return the headers
+        return self.headers
+
         pass
 
     def get_mappings(self):
@@ -110,6 +211,10 @@ class Data:
         -----------
         Python dictionary. str -> int
         '''
+
+        # Return the header2col dictionary
+        return self.header2col
+
         pass
 
     def get_num_dims(self):
@@ -119,6 +224,10 @@ class Data:
         -----------
         int. Number of dimensions in each data sample. Same thing as number of variables.
         '''
+
+        # Return the number of dimensions in each data sample
+        return len(self.headers)
+
         pass
 
     def get_num_samples(self):
@@ -128,6 +237,10 @@ class Data:
         -----------
         int. Number of data samples in dataset.
         '''
+
+        # Return the number of data samples in the dataset
+        return len(self.data)
+
         pass
 
     def get_sample(self, rowInd):
@@ -137,6 +250,10 @@ class Data:
         -----------
         ndarray. shape=(num_vars,) The data sample at index `rowInd`
         '''
+
+        # Return the data sample at index rowInd
+        return self.data[rowInd]
+
         pass
 
     def get_header_indices(self, headers):
@@ -151,6 +268,10 @@ class Data:
         Python list of nonnegative ints. shape=len(headers). The indices of the headers in `headers`
             list.
         '''
+
+        # Return a python list of non negative integers that are the indices of the headers in the headers list
+        return [self.header2col[header] for header in headers]
+
         pass
 
     def get_all_data(self):
@@ -164,6 +285,13 @@ class Data:
             NOTE: This should be a COPY, not the data stored here itself.
             This can be accomplished with numpy's copy function.
         '''
+
+        # Importing numpy
+        import numpy as np
+
+        # Return a copy of the entire dataset with numpy's copy function
+        return np.copy(self.data)
+
         pass
 
     def head(self):
@@ -175,6 +303,10 @@ class Data:
         -----------
         ndarray. shape=(5, num_vars). 1st five data samples.
         '''
+
+        # Return the first 5 data samples
+        return self.data[:5]
+
         pass
 
     def tail(self):
@@ -186,6 +318,10 @@ class Data:
         -----------
         ndarray. shape=(5, num_vars). Last five data samples.
         '''
+
+        # Return the last 5 data samples
+        return self.data[-5:]
+
         pass
 
     def limit_samples(self, start_row, end_row):
@@ -196,6 +332,10 @@ class Data:
         (Week 2)
 
         '''
+
+        # Update the data so that this Data object only stores samples in the contiguous range
+        self.data = self.data[start_row:end_row]
+
         pass
 
     def select_data(self, headers, rows=[]):
@@ -223,4 +363,7 @@ class Data:
 
         Hint: For selecting a subset of rows from the data ndarray, check out np.ix_
         '''
+
+        
+
         pass
