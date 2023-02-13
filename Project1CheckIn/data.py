@@ -199,7 +199,6 @@ class Data:
         Python list of str.
         '''
 
-        # Return the headers
         return self.headers
 
         pass
@@ -212,7 +211,6 @@ class Data:
         Python dictionary. str -> int
         '''
 
-        # Return the header2col dictionary
         return self.header2col
 
         pass
@@ -225,7 +223,6 @@ class Data:
         int. Number of dimensions in each data sample. Same thing as number of variables.
         '''
 
-        # Return the number of dimensions in each data sample
         return len(self.headers)
 
         pass
@@ -238,7 +235,6 @@ class Data:
         int. Number of data samples in dataset.
         '''
 
-        # Return the number of data samples in the dataset
         return len(self.data)
 
         pass
@@ -251,7 +247,6 @@ class Data:
         ndarray. shape=(num_vars,) The data sample at index `rowInd`
         '''
 
-        # Return the data sample at index rowInd
         return self.data[rowInd]
 
         pass
@@ -269,7 +264,6 @@ class Data:
             list.
         '''
 
-        # Return a python list of non negative integers that are the indices of the headers in the headers list
         return [self.header2col[header] for header in headers]
 
         pass
@@ -286,10 +280,7 @@ class Data:
             This can be accomplished with numpy's copy function.
         '''
 
-        # Importing numpy
         import numpy as np
-
-        # Return a copy of the entire dataset with numpy's copy function
         return np.copy(self.data)
 
         pass
@@ -304,7 +295,6 @@ class Data:
         ndarray. shape=(5, num_vars). 1st five data samples.
         '''
 
-        # Return the first 5 data samples
         return self.data[:5]
 
         pass
@@ -319,7 +309,6 @@ class Data:
         ndarray. shape=(5, num_vars). Last five data samples.
         '''
 
-        # Return the last 5 data samples
         return self.data[-5:]
 
         pass
@@ -333,7 +322,6 @@ class Data:
 
         '''
 
-        # Update the data so that this Data object only stores samples in the contiguous range
         self.data = self.data[start_row:end_row]
 
         pass
