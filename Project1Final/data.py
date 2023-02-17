@@ -98,8 +98,8 @@ class Data:
         with open(filepath, 'r') as file:
             # Reading the file
             reader = csv.reader(file)
-            # Getting the headers
-            self.headers = next(reader)
+            # Getting the headers of the file stripping the whitespaces
+            self.headers = [header.strip() for header in next(reader)]
             # Storing the data in a list
             self.data = list(reader)
 
@@ -125,8 +125,8 @@ class Data:
             del self.headers[todelete[i] - i]
 
 
-        # Storing the headers in a dictionary
-        self.header2col = {self.headers[i]: i for i in range(len(self.headers))}
+        # Storing the headers in a dictionary stripping the whitespaces
+        self.header2col = {header.strip(): i for i, header in enumerate(self.headers)}
 
         # Skipping the first row of data
         self.data = self.data[1:]
@@ -156,16 +156,16 @@ class Data:
         '''
 
         # Prints output in this format:
-#         data/iris.csv (150x4)
-# Headers:
-#   sepal_length    sepal_width    petal_length    petal_width
-# -------------------------------
-# Showing first 5/150 rows.
-# 5.1    3.5    1.4    0.2
-# 4.9    3.0    1.4    0.2
-# 4.7    3.2    1.3    0.2
-# 4.6    3.1    1.5    0.2
-# 5.0    3.6    1.4    0.2
+        #         data/iris.csv (150x4)
+        # Headers:
+        #   sepal_length    sepal_width    petal_length    petal_width
+        # -------------------------------
+        # Showing first 5/150 rows.
+        # 5.1    3.5    1.4    0.2
+        # 4.9    3.0    1.4    0.2
+        # 4.7    3.2    1.3    0.2
+        # 4.6    3.1    1.5    0.2
+        # 5.0    3.6    1.4    0.2
 
         # Declaring the output string
         output = ''
@@ -199,9 +199,9 @@ class Data:
         Python list of str.
         '''
 
-        return self.headers
-
-        pass
+        # Returns a list of headers stripped of whitespaces
+        return [header.strip() for header in self.headers]
+    
 
     def get_mappings(self):
         '''Get method for mapping between variable name and column index
@@ -213,8 +213,6 @@ class Data:
 
         return self.header2col
 
-        pass
-
     def get_num_dims(self):
         '''Get method for number of dimensions in each data sample
 
@@ -224,8 +222,6 @@ class Data:
         '''
 
         return len(self.headers)
-
-        pass
 
     def get_num_samples(self):
         '''Get method for number of data points (samples) in the dataset
@@ -237,8 +233,6 @@ class Data:
 
         return len(self.data)
 
-        pass
-
     def get_sample(self, rowInd):
         '''Gets the data sample at index `rowInd` (the `rowInd`-th sample)
 
@@ -248,8 +242,6 @@ class Data:
         '''
 
         return self.data[rowInd]
-
-        pass
 
     def get_header_indices(self, headers):
         '''Gets the variable (column) indices of the str variable names in `headers`.
@@ -264,9 +256,8 @@ class Data:
             list.
         '''
 
+        # Returns a list of the indices of the headers in the list headers
         return [self.header2col[header] for header in headers]
-
-        pass
 
     def get_all_data(self):
         '''Gets a copy of the entire dataset
@@ -283,8 +274,6 @@ class Data:
         import numpy as np
         return np.copy(self.data)
 
-        pass
-
     def head(self):
         '''Return the 1st five data samples (all variables)
 
@@ -296,8 +285,6 @@ class Data:
         '''
 
         return self.data[:5]
-
-        pass
 
     def tail(self):
         '''Return the last five data samples (all variables)
@@ -311,8 +298,6 @@ class Data:
 
         return self.data[-5:]
 
-        pass
-
     def limit_samples(self, start_row, end_row):
         '''Update the data so that this `Data` object only stores samples in the contiguous range:
             `start_row` (inclusive), end_row (exclusive)
@@ -323,8 +308,6 @@ class Data:
         '''
 
         self.data = self.data[start_row:end_row]
-
-        pass
 
     def select_data(self, headers, rows=[]):
         '''Return data samples corresponding to the variable names in `headers`.
@@ -352,6 +335,22 @@ class Data:
         Hint: For selecting a subset of rows from the data ndarray, check out np.ix_
         '''
 
+        # Getting the indices of the headers
+        indices = self.get_header_indices(headers)
         
+        # If rows is empty, return all samples
+        if len(rows) == 0:
+            return self.data[:, indices]
+                
+        # Otherwise, return ndarray the samples at the indices specified by the rows list
+        
+        # Declaring the output ndarray
+        output = np.zeros((len(rows), len(headers)))
 
-        pass
+        # Filling the output ndarray
+        for i in range(len(rows)):
+            for j in range(len(headers)):
+                output[i][j] = self.data[rows[i]][indices[j]]
+
+        # Returning the output ndarray
+        return output
