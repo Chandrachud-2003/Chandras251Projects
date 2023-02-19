@@ -8,6 +8,7 @@ Spring 2023
 import numpy as np
 
 class Data:
+
     def __init__(self, filepath=None, headers=None, data=None, header2col=None):
         '''Data object constructor
 

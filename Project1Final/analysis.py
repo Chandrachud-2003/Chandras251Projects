@@ -242,6 +242,10 @@ class Analysis:
         x = self.data.select_data([ind_var], [])
         y = self.data.select_data([dep_var], [])
 
+        # Flatten the x and y arrays
+        x = x.flatten()
+        y = y.flatten()
+
         # Create the scatter plot
         plt.scatter(x, y)
         plt.title(title)
