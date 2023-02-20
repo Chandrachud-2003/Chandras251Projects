@@ -246,11 +246,15 @@ class Analysis:
         x = x.flatten()
         y = y.flatten()
 
+        cmap = plt.cm.get_cmap('plasma')
+
         # Create the scatter plot
-        plt.scatter(x, y)
+        plt.scatter(x, y, c=y, cmap=cmap)
         plt.title(title)
         plt.xlabel(ind_var)
         plt.ylabel(dep_var)
+
+        plt.colorbar(label=dep_var)
 
         return x, y
 
@@ -286,6 +290,8 @@ class Analysis:
         x axis and rows usually share the same y axis.
         '''
 
+        cmap = plt.cm.get_cmap('plasma')
+
         # Make the len(data_vars) x len(data_vars) grid of scatterplots
         fig, axes = plt.subplots(len(data_vars), len(data_vars), figsize=fig_sz, sharex='col', sharey='row')
         # Creating scatter plots for each combination of variables in `data_vars`
@@ -293,7 +299,9 @@ class Analysis:
             for j in range(len(data_vars)):
                 # Creating the scatter plot
                 ax = axes[i, j]
-                ax.scatter(self.data.select_data([data_vars[j]], []), self.data.select_data([data_vars[i]], []))
+                x = self.data.select_data([data_vars[j]], [])
+                y = self.data.select_data([data_vars[i]], [])
+                ax.scatter(x, y, c=y, cmap=cmap)
                 # Setting the x and y labels
                 if i == len(data_vars) - 1:
                     ax.set_xlabel(data_vars[j])
@@ -306,6 +314,10 @@ class Analysis:
         # Setting the title
         fig.suptitle(title)
 
+        # Setting a common colorbar
+        fig.colorbar(ax.collections[0], ax=axes, label=data_vars[-1])
+
+        # Return the figure and axes
         return fig, axes
 
     # Extension methods:
@@ -334,19 +346,33 @@ class Analysis:
 
         # Creating the figure and axes
         fig, axes = plt.subplots(1, len(headers), figsize=(len(headers) * 4, 4))
+        
+        # Creating a color map based on y values
+        cmap = plt.get_cmap('cool')
+        colors = cmap(np.linspace(0, 1, len(headers)))
+
         # Looping through each header variable name in `headers`
         for i in range(len(headers)):
-            # Creating the boxplot
+            # Creating the boxplot with different colors
             ax = axes[i]
-            ax.boxplot(self.data.select_data([headers[i]], rows))
+            data = self.data.select_data([headers[i]], rows)
+            bp = ax.boxplot(data, patch_artist=True)
+            for patch in bp['boxes']:
+                patch.set_facecolor(colors[i])
+                
             # Setting the x and y labels
             ax.set_xlabel(headers[i])
             ax.set_ylabel('Value')
-
+        
+        # Creating a color bar to show what each color corresponds to
+        sm = plt.cm.ScalarMappable(cmap=cmap, norm=plt.Normalize(vmin=0, vmax=len(headers)))
+        sm.set_array([])
+        fig.colorbar(sm, ax=axes)
+        
         # SETTING THE TITLE
         fig.suptitle('Boxplots for the Headers: ' + str(headers))
 
-        return fig, axes    
+        return fig, axes  
 
     # Histograms
     def histogram(self, headers, rows=[]):
@@ -375,10 +401,18 @@ class Analysis:
         for i in range(len(headers)):
             # Creating the histogram
             ax = axes[i]
-            ax.hist(self.data.select_data([headers[i]], rows))
+            counts, bins, patches = ax.hist(self.data.select_data([headers[i]], rows))
             # Setting the x and y labels
             ax.set_xlabel(headers[i])
             ax.set_ylabel('Frequency')
+            # Set different colors based on the y value of the plot
+            color_values = plt.cm.plasma(counts / float(counts.max()))
+            for patch, color in zip(patches, color_values):
+                patch.set_facecolor(color)
+
+        # Create a color bar to show the mapping between color and value
+        sm = plt.cm.ScalarMappable(cmap=plt.cm.plasma, norm=plt.Normalize(vmin=counts.min(), vmax=counts.max()))
+        fig.colorbar(sm, ax=axes)
 
         # SETTING THE TITLE
         fig.suptitle('Histograms for the Headers: ' + str(headers))
@@ -388,8 +422,9 @@ class Analysis:
     # Heatmap
     def heatmap(self, headers, rows=[]):
 
-        # Importing sns
+        # Importing sns and pandas
         import seaborn as sns
+        import pandas as pd
 
         '''Creates a heatmap for each variable in `headers` in the data object.
         Possibly only in a subset of data samples (`rows`) if `rows` is not empty.
@@ -412,8 +447,10 @@ class Analysis:
 
         # Creating the figure and axes
         fig, ax = plt.subplots(figsize=(len(headers) * 4, len(headers) * 4))
-        # Creating the heatmap
-        ax = sns.heatmap(self.data.select_data(headers, rows).corr(), annot=True, cmap='coolwarm')
+        
+        # Converting the selected data to a Pandas DataFrame and creating the heatmap
+        ax = sns.heatmap(pd.DataFrame(self.data.select_data(headers, rows)).corr(), annot=True, cmap='plasma')
+        
         # Setting the title
         ax.set_title('Heatmap for the Headers: ' + str(headers))
 
@@ -446,14 +483,19 @@ class Analysis:
         # Creating the figure and axes
         fig = plt.figure(figsize=(len(headers) * 4, len(headers) * 4))
         ax = fig.add_subplot(111, projection='3d')
-        # Creating the 3D scatterplot
-        ax.scatter(self.data.select_data([headers[0]], rows), self.data.select_data([headers[1]], rows), self.data.select_data([headers[2]], rows))
+        # Creating the 3D scatterplot with colors based on y-values and plasma colormap
+        y_data = self.data.select_data([headers[1]], rows)
+        ax.scatter(self.data.select_data([headers[0]], rows), y_data, self.data.select_data([headers[2]], rows), c=y_data, cmap='plasma')
         # Setting the x and y labels
         ax.set_xlabel(headers[0])
         ax.set_ylabel(headers[1])
         ax.set_zlabel(headers[2])
         # Setting the title
         ax.set_title('3D Scatterplot for the Headers: ' + str(headers))
+        
+        # Adding a colorbar for the plasma colormap
+        cbar = plt.colorbar(ax.collections[0])
+        cbar.ax.set_ylabel(headers[1])
 
         return fig, ax
 
