@@ -7,6 +7,8 @@ Spring 2023
 
 import numpy as np
 
+# Modifying the data.csv file to corectly parse and represent dates, strings, enums, and other types of data.
+
 class Data:
 
     def __init__(self, filepath=None, headers=None, data=None, header2col=None):
