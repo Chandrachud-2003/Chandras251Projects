@@ -44,7 +44,7 @@ class Data:
         self.header2col = header2col
 
         # Checking if the filepath is not None
-        if filepath is not None:
+        if filepath is not None and filepath != '':
             self.read(filepath)
 
         pass
