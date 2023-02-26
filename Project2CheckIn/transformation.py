@@ -28,6 +28,13 @@ class Transformation(analysis.Analysis):
         - Pass `data` to the superclass constructor.
         - Create an instance variable for `orig_dataset`.
         '''
+
+        # Pass `data` to the superclass constructor.
+        super().__init__(data)
+
+        # Create an instance variable for `orig_dataset`.
+        self.orig_dataset = orig_dataset
+
         pass
 
     def project(self, headers):
@@ -52,6 +59,17 @@ class Transformation(analysis.Analysis):
         variables). Determine and fill in 'valid' values for all the `Data` constructor
         keyword arguments (except you dont need `filepath` because it is not relevant here).
         '''
+
+        # Create a new `Data` object that you assign to `self.data` (project data onto the `headers`
+        # variables). Determine and fill in 'valid' values for all the `Data` constructor
+        # keyword arguments (except you dont need `filepath` because it is not relevant here).
+
+        # Create a new `Data` object that you assign to `self.data` (project data onto the `headers`
+        # variables). Determine and fill in 'valid' values for all the `Data` constructor
+        # keyword arguments (except you dont need `filepath` because it is not relevant here).
+        self.data = data.Data(headers=headers, data=self.orig_dataset.get_data(headers=headers))
+        
+
         pass
 
     def get_data_homogeneous(self):
@@ -68,7 +86,15 @@ class Transformation(analysis.Analysis):
         NOTE:
         - Do NOT update self.data with the homogenous coordinate.
         '''
+
+        # TODO: Return a version of the projected data array with an added homogeneous coordinate.
+        # Useful for homogeneous transformations.
+        return np.hstack((self.data.get_data(), np.ones((self.data.get_data().shape[0], 1))))
+
+
         pass
+
+        
 
     def translation_matrix(self, magnitudes):
         ''' Make an M-dimensional homogeneous transformation matrix for translation,
@@ -86,7 +112,11 @@ class Transformation(analysis.Analysis):
 
         NOTE: This method just creates the translation matrix. It does NOT actually PERFORM the
         translation!
-        '''
+        ''' 
+
+        # Creating only the M-dimensional homogeneous transformation matrix for translation where M is the number of features in the projected dataset.
+
+
         pass
 
     def scale_matrix(self, magnitudes):
