@@ -267,17 +267,18 @@ class Transformation(analysis.Analysis):
         using matrix multiplications (matrix transformations).
         '''
         # Find the global minimum and range across all variables
-        global_min = np.min(self.data)
-        global_range = np.max(self.data) - global_min
+        data_array = self.data.get_all_data()
+        global_min = np.min(data_array)
+        global_range = np.max(data_array) - global_min
         
         # Translate the global minimum to zero
-        self.data -= global_min
+        data_array -= global_min
         
         # Scale the global range to one
-        self.data /= global_range
+        data_array /= global_range
         
         # Return the normalized data
-        return self.data
+        return data_array
 
 
     def normalize_separately(self):
@@ -295,18 +296,19 @@ class Transformation(analysis.Analysis):
         '''
 
         # Find the local minimum and range for each variable
-        local_min = np.min(self.data, axis=0)
+        data_array = self.data.get_all_data()
+        local_min = np.min(data_array, axis=0)
 
-        local_range = np.max(self.data, axis=0) - local_min
+        local_range = np.max(data_array, axis=0) - local_min
 
         # Translate the local minimum to zero
-        self.data -= local_min
+        data_array -= local_min
 
         # Scale the local range to one
-        self.data /= local_range
+        data_array /= local_range
 
         # Return the normalized data
-        return self.data
+        return data_array
 
     def rotation_matrix_3d(self, header, degrees):
         '''Make an 3-D homogeneous rotation matrix for rotating the projected data
@@ -470,11 +472,8 @@ class Transformation(analysis.Analysis):
         # Set the color bar label
         cbar = ax.figure.colorbar(ax.collections[0])
 
-        # Adding space between the color bar and the plot
+        # Adding space between the color bar aand color bar label
         cbar.ax.yaxis.set_ticks_position('right')
-
-        # Plotting the color bar
-        cbar.ax.set_ylabel(c_var, rotation=-90)
 
         # Show the figure
         plt.show()
