@@ -35,8 +35,6 @@ class Transformation(analysis.Analysis):
         # Create an instance variable for `orig_dataset`.
         self.orig_dataset = orig_dataset
 
-        pass
-
     def project(self, headers):
         '''Project the original dataset onto the list of data variables specified by `headers`,
         i.e. select a subset of the variables from the original dataset.
@@ -67,11 +65,10 @@ class Transformation(analysis.Analysis):
         # Create a new `Data` object that you assign to `self.data` (project data onto the `headers`
         # variables). Determine and fill in 'valid' values for all the `Data` constructor
         # keyword arguments (except you dont need `filepath` because it is not relevant here).
-        self.data = data.Data(headers=headers, data=self.orig_dataset.get_data(headers=headers))
+        # Modifying the header2col to only contain the headers that are in the headers list and changing the values to the corresponding values in the headers list.
+        header2col = {header.strip(): i for i, header in enumerate(headers)}
+        self.data = data.Data(filepath = "", headers=headers, data=self.orig_dataset.select_data(headers = headers), header2col=header2col)
         
-
-        pass
-
     def get_data_homogeneous(self):
         '''Helper method to get a version of the projected data array with an added homogeneous
         coordinate. Useful for homogeneous transformations.
@@ -89,12 +86,7 @@ class Transformation(analysis.Analysis):
 
         # TODO: Return a version of the projected data array with an added homogeneous coordinate.
         # Useful for homogeneous transformations.
-        return np.hstack((self.data.get_data(), np.ones((self.data.get_data().shape[0], 1))))
-
-
-        pass
-
-        
+        return np.hstack((self.data.get_all_data(), np.ones((self.data.get_all_data().shape[0], 1))))
 
     def translation_matrix(self, magnitudes):
         ''' Make an M-dimensional homogeneous transformation matrix for translation,
@@ -114,10 +106,13 @@ class Transformation(analysis.Analysis):
         translation!
         ''' 
 
-        # Creating only the M-dimensional homogeneous transformation matrix for translation where M is the number of features in the projected dataset.
+        # Setting the other magnitudes to 0 if the length of the magnitudes is less than the number of dimensions
+        if len(magnitudes) < self.data.get_num_dims():
+            magnitudes = magnitudes + [0] * (self.data.get_num_dims() - len(magnitudes))
+        translation_matrix = np.eye(self.data.get_num_dims()+1)
 
-
-        pass
+        translation_matrix[:-1, -1] = magnitudes
+        return translation_matrix
 
     def scale_matrix(self, magnitudes):
         '''Make an M-dimensional homogeneous scaling matrix for scaling, where M is the number of
@@ -134,7 +129,12 @@ class Transformation(analysis.Analysis):
 
         NOTE: This method just creates the scaling matrix. It does NOT actually PERFORM the scaling!
         '''
-        pass
+
+        if len(magnitudes) < self.data.get_num_dims():
+            magnitudes = magnitudes + [0] * (self.data.get_num_dims() - len(magnitudes))
+        transformation_matrix = np.eye(self.data.get_num_dims()+1)
+        transformation_matrix[:-1, :-1] = np.diag(magnitudes)
+        return transformation_matrix
 
     def translate(self, magnitudes):
         '''Translates the variables `headers` in projected dataset in corresponding amounts specified
@@ -157,8 +157,23 @@ class Transformation(analysis.Analysis):
         transformed in this method). NOTE: The updated `self.data` SHOULD NOT have a homogenous
         coordinate!
         '''
-        pass
 
+        # create the translation matrix
+        translation_matrix = self.translation_matrix(magnitudes)
+
+        # apply the translation matrix to the data
+        data_translated = self.data.get_all_data() @ translation_matrix[:-1,:-1] + translation_matrix[:-1,-1]
+
+        # create a new Data object with the translated data
+        headers = self.data.get_headers()
+        header2col = self.data.get_mappings()
+        new_data = data.Data(headers = headers, header2col = header2col, data = data_translated)
+
+        # update self.data with the new Data object
+        self.data = new_data
+
+        return data_translated
+    
     def scale(self, magnitudes):
         '''Scales the variables `headers` in projected dataset in corresponding amounts specified
         by `magnitudes`.
@@ -180,7 +195,22 @@ class Transformation(analysis.Analysis):
         transformed in this method). NOTE: The updated `self.data` SHOULD NOT have a
         homogenous coordinate!
         '''
-        pass
+
+        # create the scaling matrix
+        scaling_matrix = self.scale_matrix(magnitudes)
+
+        # apply the scaling matrix to the data
+        data_scaled = self.data.get_all_data() @ scaling_matrix[:-1,:-1] + scaling_matrix[:-1,-1]
+
+        # create a new Data object with the scaled data
+        headers = self.data.get_headers()
+        header2col = self.data.get_mappings()
+        new_data = data.Data(headers = headers, header2col = header2col, data = data_scaled)
+
+        # update self.data with the new Data object
+        self.data = new_data
+
+        return data_scaled
 
     def transform(self, C):
         '''Transforms the PROJECTED dataset by applying the homogeneous transformation matrix `C`.
@@ -202,7 +232,26 @@ class Transformation(analysis.Analysis):
         transformed in this method). NOTE: The updated `self.data` SHOULD NOT have a homogenous
         coordinate!
         '''
-        pass
+
+        # Use matrix multiplication to apply the compound transformation matix `C` to the projected
+        # dataset.
+        # Update `self.data` with a NEW Data object with the SAME `headers` and `header2col`
+        # dictionary as the current `self.data`, but DIFFERENT data (set to the data you
+        # transformed in this method). NOTE: The updated `self.data` SHOULD NOT have a homogenous
+        # coordinate!
+
+        # apply the transformation matrix to the data
+        data_transformed = self.data.get_all_data() @ C[:-1,:-1] + C[:-1,-1]
+
+        # create a new Data object with the transformed data
+        headers = self.data.get_headers()
+        header2col = self.data.get_mappings()
+        new_data = data.Data(headers = headers, header2col = header2col, data = data_transformed)
+
+        # update self.data with the new Data object
+        self.data = new_data
+
+        return data_transformed
 
     def normalize_together(self):
         '''Normalize all variables in the projected dataset together by translating the global minimum
@@ -217,7 +266,20 @@ class Transformation(analysis.Analysis):
         NOTE: Given the goal of this project, for full credit you should implement the normalization
         using matrix multiplications (matrix transformations).
         '''
-        pass
+        # Find the global minimum and range across all variables
+        data_array = self.data.get_all_data()
+        global_min = np.min(data_array)
+        global_range = np.max(data_array) - global_min
+        
+        # Translate the global minimum to zero
+        data_array -= global_min
+        
+        # Scale the global range to one
+        data_array /= global_range
+        
+        # Return the normalized data
+        return data_array
+
 
     def normalize_separately(self):
         '''Normalize each variable separately by translating its local minimum to zero and scaling
@@ -232,7 +294,21 @@ class Transformation(analysis.Analysis):
         NOTE: Given the goal of this project, for full credit you should implement the normalization
         using matrix multiplications (matrix transformations).
         '''
-        pass
+
+        # Find the local minimum and range for each variable
+        data_array = self.data.get_all_data()
+        local_min = np.min(data_array, axis=0)
+
+        local_range = np.max(data_array, axis=0) - local_min
+
+        # Translate the local minimum to zero
+        data_array -= local_min
+
+        # Scale the local range to one
+        data_array /= local_range
+
+        # Return the normalized data
+        return data_array
 
     def rotation_matrix_3d(self, header, degrees):
         '''Make an 3-D homogeneous rotation matrix for rotating the projected data
@@ -249,6 +325,17 @@ class Transformation(analysis.Analysis):
 
         NOTE: This method just creates the rotation matrix. It does NOT actually PERFORM the rotation!
         '''
+
+        # Get the column index of the variable `header`
+        col = self.data.header2col[header]
+
+        # Create the rotation matrix
+        R = np.eye(4)
+        R[col, col] = np.cos(np.deg2rad(degrees))
+
+        # Return the rotation matrix
+        return R
+
         pass
 
     def rotate_3d(self, header, degrees):
@@ -272,7 +359,15 @@ class Transformation(analysis.Analysis):
         transformed in this method). NOTE: The updated `self.data` SHOULD NOT have a
         homogenous coordinate!
         '''
-        pass
+
+        # Use matrix multiplication to rotate the projected dataset, as advertised above.
+        # Update `self.data` with a NEW Data object with the SAME `headers` and `header2col`
+        # dictionary as the current `self.data`, but DIFFERENT data (set to the data you
+        # transformed in this method). NOTE: The updated `self.data` SHOULD NOT have a
+        # homogenous coordinate!
+
+        self.data = data.Data(headers=self.data.get_headers(), data=np.dot(self.get_data_homogeneous(), self.rotation_matrix_3d(header, degrees))[:, :-1])
+        return self.data.get_all_data()
 
     def scatter3d(self, xlim, ylim, zlim, better_view=False):
         '''Creates a 3D scatter plot to visualize data the x, y, and z axes are drawn, but not ticks
@@ -340,7 +435,48 @@ class Transformation(analysis.Analysis):
             NOTE: Use a ColorBrewer color palette (e.g. from the `palettable` library).
         title: str or None. Optional title that will appear at the top of the figure.
         '''
-        pass
+
+        # Get the data for the variable `ind_var`
+        ind_data = self.data.select_data([ind_var])
+
+        # Get the data for the variable `dep_var`
+        dep_data = self.data.select_data([dep_var])
+
+        # Get the data for the variable `c_var`
+        c_data = self.data.select_data([c_var])
+
+        # Create a figure and axes object
+        fig, ax = plt.subplots()
+
+        # Use a ColorBrewer color palette to implement the color scale (e.g. from the `palettable` library).
+        # - To do so, go to https://jiffyclub.github.io/palettable/colorbrewer/, and examine maps in the 3 categories (diverging, qualitative, and sequential) to find the appropriate map. Access via the naming scheme below. The map has an attribute named mpl_colormap that can be passed in to `scatter` to control the colors (as the value for the cmap parameter). We use the third feature (which we are calling Z here) to determine which values of the color map are used for which data points. We can also control the outline of the points with the edgecolor argument (here we make it black).
+        #         color_map = palettable.colorbrewer.sequential.Purples_9
+        #         scatter(X, Y, c=Z, s=75, cmap=color_map.mpl_colormap, edgecolor='black')
+        
+        # Import the palettable library
+        import palettable
+
+        # Create a color map using the palettable library
+        color_map = palettable.colorbrewer.sequential.Purples_9
+
+        # Create a scatter plot of the data
+        ax.scatter(ind_data, dep_data, c=c_data, cmap=color_map.mpl_colormap, edgecolor='black')
+
+        # Set the title of the figure
+        ax.set_title(title)
+
+        # Set the labels of the axes
+        ax.set_xlabel(ind_var)
+        ax.set_ylabel(dep_var)
+
+        # Set the color bar label
+        cbar = ax.figure.colorbar(ax.collections[0])
+
+        # Adding space between the color bar aand color bar label
+        cbar.ax.yaxis.set_ticks_position('right')
+
+        # Show the figure
+        plt.show()
 
     def heatmap(self, headers=None, title=None, cmap="gray"):
         '''Generates a heatmap of the specified variables (defaults to all). Each variable is normalized

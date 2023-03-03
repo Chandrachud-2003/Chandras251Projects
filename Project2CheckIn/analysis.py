@@ -246,15 +246,12 @@ class Analysis:
         x = x.flatten()
         y = y.flatten()
 
-        cmap = plt.cm.get_cmap('plasma')
-
         # Create the scatter plot
-        plt.scatter(x, y, c=y, cmap=cmap)
+        plt.scatter(x, y)
         plt.title(title)
         plt.xlabel(ind_var)
         plt.ylabel(dep_var)
 
-        plt.colorbar(label=dep_var)
 
         return x, y
 
@@ -290,8 +287,6 @@ class Analysis:
         x axis and rows usually share the same y axis.
         '''
 
-        cmap = plt.cm.get_cmap('plasma')
-
         # Make the len(data_vars) x len(data_vars) grid of scatterplots
         fig, axes = plt.subplots(len(data_vars), len(data_vars), figsize=fig_sz, sharex='col', sharey='row')
         # Creating scatter plots for each combination of variables in `data_vars`
@@ -301,7 +296,7 @@ class Analysis:
                 ax = axes[i, j]
                 x = self.data.select_data([data_vars[j]], [])
                 y = self.data.select_data([data_vars[i]], [])
-                ax.scatter(x, y, c=y, cmap=cmap)
+                ax.scatter(x, y)
                 # Setting the x and y labels
                 if i == len(data_vars) - 1:
                     ax.set_xlabel(data_vars[j])
@@ -313,9 +308,6 @@ class Analysis:
 
         # Setting the title
         fig.suptitle(title)
-
-        # Setting a common colorbar
-        fig.colorbar(ax.collections[0], ax=axes, label=data_vars[-1])
 
         # Return the figure and axes
         return fig, axes
