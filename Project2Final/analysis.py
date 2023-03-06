@@ -302,9 +302,6 @@ class Analysis:
                     ax.set_xlabel(data_vars[j])
                 if j == 0:
                     ax.set_ylabel(data_vars[i])
-                # Removing the x and y ticks
-                ax.set_xticks([])
-                ax.set_yticks([])
 
         # Setting the title
         fig.suptitle(title)

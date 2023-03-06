@@ -41,3 +41,6 @@ if __name__ == '__main__':
     letter_filename = 'data/letter_data.csv'
     letter_data = data.Data(letter_filename)
     scatter3d(letter_data)
+
+    # Show in a new window
+    plt.show()

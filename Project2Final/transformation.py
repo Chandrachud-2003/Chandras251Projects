@@ -211,7 +211,7 @@ class Transformation(analysis.Analysis):
         self.data = new_data
 
         return data_scaled
-
+    
     def transform(self, C):
         '''Transforms the PROJECTED dataset by applying the homogeneous transformation matrix `C`.
 
@@ -266,6 +266,157 @@ class Transformation(analysis.Analysis):
         NOTE: Given the goal of this project, for full credit you should implement the normalization
         using matrix multiplications (matrix transformations).
         '''
+        
+        # Getting the data 
+        data_array = self.data.get_all_data()
+
+        homogenizedData = np.append(data_array, np.array([np.ones(data_array.shape[0], dtype=int)]).T, axis=1)
+        # subtract the global minimum from each datapoint
+        translateTransform = np.eye(homogenizedData.shape[1], dtype=float)
+        for i in range(data_array.shape[1]):
+            translateTransform[i, 3] = -data_array.min()
+
+        # divide by the global range
+        scaleTransform = np.eye(homogenizedData.shape[1])
+        for i in range(data_array.shape[1]):
+            scaleTransform[i, i] = 1/(data_array.max()-data_array.min())
+       
+        # when we do a series of transformations, first we multiply the smaller transformation matrices, and only at the end the result of that with the larger data matrix (more efficient!)
+        totalTransform = scaleTransform@translateTransform
+
+        transformedData = (totalTransform@homogenizedData.T).T
+        
+        # create a new Data object with the transformed data
+        headers = self.data.get_headers()
+        header2col = self.data.get_mappings()
+        new_data = data.Data(headers = headers, header2col = header2col, data = transformedData)
+
+        # update self.data with the new Data object
+        self.data = new_data
+        
+        # Return the normalized data
+        return data_array
+
+        
+    def normalize_separately(self):
+        '''Normalize each variable separately by translating its local minimum to zero and scaling
+        its local range to one.
+
+        You should normalize (update) the data stored in `self.data`.
+
+        Returns:
+        -----------
+        ndarray. shape=(N, num_proj_vars). The normalized version of the projected dataset.
+
+        NOTE: Given the goal of this project, for full credit you should implement the normalization
+        using matrix multiplications (matrix transformations).
+        '''
+        # Find the local minimum and range for each variable
+        data_array = self.data.get_all_data()
+        
+        # Compute the local minimum and maximum
+        mins = np.min(data_array, axis=0)
+        ranges = np.ptp(data_array, axis=0)
+
+        # Shift the data to have minimum zero
+        shifted_data = data_array - mins
+        
+        # Scale the data to have maximum range 1
+        D = np.diag(1 / ranges)
+        scaled_data = np.matmul(shifted_data, D)
+
+        # create a new Data object with the transformed data
+        headers = self.data.get_headers()
+        header2col = self.data.get_mappings()
+        new_data = data.Data(headers=headers, header2col=header2col, data=scaled_data)
+
+        # update self.data with the new Data object
+        self.data = new_data
+
+        # Return the normalized data
+        return scaled_data
+
+    
+    # Extension 2 - Normalizing by z score instead of min/max
+    def normalize_z_together(self):
+        '''Normalize all variables in the projected dataset together by computing the z-score across
+        all variables.
+
+        You should normalize (update) the data stored in `self.data`.
+
+        Returns:
+        -----------
+        ndarray. shape=(N, num_proj_vars). The normalized version of the projected dataset.
+
+        NOTE: Given the goal of this project, for full credit you should implement the normalization
+        using matrix multiplications (matrix transformations).
+        '''
+        # Compute the mean and standard deviation across all variables
+        data_array = self.data.get_all_data()
+        mean = np.mean(data_array, axis=0)
+        std = np.std(data_array, axis=0)
+
+        # Compute the Z-score by subtracting the mean and dividing by the standard deviation
+        data_array = (data_array - mean) / std
+
+        # create a new Data object with the transformed data
+        headers = self.data.get_headers()
+        header2col = self.data.get_mappings()
+        new_data = data.Data(headers = headers, header2col = header2col, data = data_array)
+
+        # update self.data with the new Data object
+        self.data = new_data
+
+        # Return the normalized data
+        return data_array
+
+
+    def normalize_z_separately(self):
+        '''Normalize each variable separately by computing the z-score for each variable.
+
+        You should normalize (update) the data stored in `self.data`.
+
+        Returns:
+        -----------
+        ndarray. shape=(N, num_proj_vars). The normalized version of the projected dataset.
+
+        NOTE: Given the goal of this project, for full credit you should implement the normalization
+        using matrix multiplications (matrix transformations).
+        '''
+
+        # Compute the mean and standard deviation for each variable
+        data_array = self.data.get_all_data()
+        mean = np.mean(data_array, axis=0)
+        std = np.std(data_array, axis=0)
+
+        # Compute the Z-score by subtracting the mean and dividing by the standard deviation
+        data_array = (data_array - mean) / std
+
+        # create a new Data object with the transformed data
+        headers = self.data.get_headers()
+        header2col = self.data.get_mappings()
+        new_data = data.Data(headers = headers, header2col = header2col, data = data_array)
+
+        # update self.data with the new Data object
+        self.data = new_data
+
+        # Return the normalized data
+        return data_array
+
+    # Extension 2 - Implement normalize together and separately using numpy vectorization/broadcasting.
+    def normalize_vectorization_together(self):
+        '''Normalize all variables in the projected dataset together by translating the global minimum
+        (across all variables) to zero and scaling the global range (across all variables) to one.
+
+        You should normalize (update) the data stored in `self.data`.
+
+        Returns:
+        -----------
+        ndarray. shape=(N, num_proj_vars). The normalized version of the projected dataset.
+
+        NOTE: Given the goal of this project, for full credit you should implement the normalization
+        using matrix multiplications (matrix transformations).
+        '''
         # Find the global minimum and range across all variables
         data_array = self.data.get_all_data()
         global_min = np.min(data_array)
@@ -276,12 +427,20 @@ class Transformation(analysis.Analysis):
         
         # Scale the global range to one
         data_array /= global_range
+
+        # create a new Data object with the transformed data
+        headers = self.data.get_headers()
+        header2col = self.data.get_mappings()
+        new_data = data.Data(headers = headers, header2col = header2col, data = data_array)
+
+        # update self.data with the new Data object
+        self.data = new_data
         
         # Return the normalized data
         return data_array
 
 
-    def normalize_separately(self):
+    def normalize_vectorization_separately(self):
         '''Normalize each variable separately by translating its local minimum to zero and scaling
         its local range to one.
 
@@ -307,37 +466,102 @@ class Transformation(analysis.Analysis):
         # Scale the local range to one
         data_array /= local_range
 
+        # create a new Data object with the transformed data
+        headers = self.data.get_headers()
+        header2col = self.data.get_mappings()
+        new_data = data.Data(headers = headers, header2col = header2col, data = data_array)
+
+        # update self.data with the new Data object
+        self.data = new_data
+
         # Return the normalized data
         return data_array
-
-    def rotation_matrix_3d(self, header, degrees):
-        '''Make an 3-D homogeneous rotation matrix for rotating the projected data
-        about the ONE axis/variable `header`.
+    
+    # Extension 2 - Whitening the dataset
+    # To "whiten" a dataset, you can perform a series of steps that result in a new dataset with zero mean and unit variance. 
+    def whiten(self):
+        '''Whiten the dataset by computing the Z-score and centering it around zero.
 
         Parameters:
         -----------
-        header: str. Specifies the variable about which the projected dataset should be rotated.
-        degrees: float. Angle (in degrees) by which the projected dataset should be rotated.
+        data : ndarray. shape=(N, num_vars)
+            The dataset to be whitened.
 
         Returns:
         -----------
-        ndarray. shape=(4, 4). The 3D rotation matrix with homogenous coordinate.
-
-        NOTE: This method just creates the rotation matrix. It does NOT actually PERFORM the rotation!
+        ndarray. shape=(N, num_vars)
+            The whitened dataset.
         '''
 
-        # Get the column index of the variable `header`
-        col = self.data.header2col[header]
+        data_array = self.data.get_all_data()
 
-        # Create the rotation matrix
-        R = np.eye(4)
-        R[col, col] = np.cos(np.deg2rad(degrees))
+        # Compute the mean and standard deviation across all variables
+        mean = np.mean(data_array, axis=0)
+        std = np.std(data_array, axis=0)
 
-        # Return the rotation matrix
-        return R
+        # Compute the Z-score by subtracting the mean and dividing by the standard deviation
+        zscore = (data_array - mean) / std
 
-        pass
+        # Center the data around zero
+        whitened_data = zscore - np.mean(zscore, axis=0)
 
+        # create a new Data object with the transformed data
+        headers = self.data.get_headers()
+        header2col = self.data.get_mappings()
+        new_data = data.Data(headers = headers, header2col = header2col, data = whitened_data)
+
+        # update self.data with the new Data object
+        self.data = new_data
+
+        return whitened_data
+
+    def rotation_matrix_3d(self, header, degrees):
+            '''Make an 3-D homogeneous rotation matrix for rotating the projected data
+            about the ONE axis/variable `header`.
+
+            Parameters:
+            -----------
+            header: str. Specifies the variable about which the projected dataset should be rotated.
+            degrees: float. Angle (in degrees) by which the projected datasetshould be rotated.
+
+            Returns:
+            -----------
+            ndarray. shape=(4, 4). The 3D rotation matrix with homogenous coordinate.
+
+            NOTE: This method just creates the rotation matrix. It does NOT actually PERFORM the rotation!
+            '''
+
+            # Convert the degrees to radians
+            radians = np.radians(degrees)
+
+            # Get the column index of the variable `header`
+            col = self.data.get_mappings()[header]
+
+            # Create the rotation matrix
+            rotation_matrix = np.eye(4)
+            
+            # Set the appropriate values in the rotation matrix
+            if col == 0:
+                rotation_matrix[1,1] = np.cos(radians)
+                rotation_matrix[1,2] = -np.sin(radians)
+                rotation_matrix[2,1] = np.sin(radians)
+                rotation_matrix[2,2] = np.cos(radians)
+
+            elif col == 1:
+                rotation_matrix[0,0] = np.cos(radians)
+                rotation_matrix[0,2] = np.sin(radians)
+                rotation_matrix[2,0] = -np.sin(radians)
+                rotation_matrix[2,2] = np.cos(radians)
+
+            elif col == 2:
+                rotation_matrix[0,0] = np.cos(radians)
+                rotation_matrix[0,1] = -np.sin(radians)
+                rotation_matrix[1,0] = np.sin(radians)
+                rotation_matrix[1,1] = np.cos(radians)
+
+            return rotation_matrix
+
+    
     def rotate_3d(self, header, degrees):
         '''Rotates the projected data about the variable `header` by the angle (in degrees)
         `degrees`.
@@ -360,14 +584,25 @@ class Transformation(analysis.Analysis):
         homogenous coordinate!
         '''
 
-        # Use matrix multiplication to rotate the projected dataset, as advertised above.
-        # Update `self.data` with a NEW Data object with the SAME `headers` and `header2col`
-        # dictionary as the current `self.data`, but DIFFERENT data (set to the data you
-        # transformed in this method). NOTE: The updated `self.data` SHOULD NOT have a
-        # homogenous coordinate!
+        # Get the rotation matrix
+        rotation_matrix = self.rotation_matrix_3d(header, degrees)
 
-        self.data = data.Data(headers=self.data.get_headers(), data=np.dot(self.get_data_homogeneous(), self.rotation_matrix_3d(header, degrees))[:, :-1])
-        return self.data.get_all_data()
+        # Apply the rotation matrix to the data
+        rotated_data = rotation_matrix @ self.get_data_homogeneous().T
+        rotated_data = rotated_data[:-1, :].T
+
+        # create a new Data object with the transformed data
+        headers = self.data.get_headers()
+        header2col = self.data.get_mappings()
+        new_data = data.Data(headers = headers, header2col = header2col, data = rotated_data)
+
+        # update self.data with the new Data object
+        self.data = new_data
+
+        return rotated_data
+        
+        
+
 
     def scatter3d(self, xlim, ylim, zlim, better_view=False):
         '''Creates a 3D scatter plot to visualize data the x, y, and z axes are drawn, but not ticks
@@ -477,6 +712,94 @@ class Transformation(analysis.Analysis):
 
         # Show the figure
         plt.show()
+
+    # Extension 1 - Implement a 3d scatter plot version that uses the marker size aesthetic to visualize another dimension of data (up to 4D)
+    def scatter_size(self, x, y, z, size_var, better_view=False, title = None):
+        '''Creates a 3D scatter plot with a marker size aesthetic representing the 4th dimension.
+
+        Parameters:
+        -----------
+        x: str. Header of the variable that will be plotted along the X axis.
+        y: str. Header of the variable that will be plotted along the Y axis.
+        z: str. Header of the variable that will be plotted along the Z axis.
+        size_var: str. Header of the variable that will be plotted along the size axis.
+        better_view: bool. If True, the axes will be rotated so that the 2nd axis is up and the 3rd is forward.
+        '''
+
+        # Get the data for the variables `x`, `y`, `z`, and `size_var`
+        x_data = self.data.select_data([x])
+        y_data = self.data.select_data([y])
+        z_data = self.data.select_data([z])
+        size_data = self.data.select_data([size_var])
+
+        # Create a figure and axes object
+        fig = plt.figure()
+        # Increase the size of the figure
+        fig.set_size_inches(10, 10)
+        ax = plt.axes(projection='3d')
+
+        # Scatter plot of data in 3D
+        ax.scatter3D(x_data, y_data, z_data, s=size_data)
+
+        # Set the labels of the axes
+        ax.set_xlabel(x)
+        ax.set_ylabel(y)
+        ax.set_zlabel(z)
+
+        # Set the title of the figure
+        ax.set_title(title)
+
+        # Show the figure
+        plt.show()
+
+
+    # Extension 1 - Implement a 3d scatter plot version that uses both color and marker size aesthetics (up to 5D).
+    def scatter_color_size(self, x, y, z, size_var, color_var, better_view=False, title=None):
+        '''Creates a 3D scatter plot with a marker size aesthetic representing the 4th dimension.
+
+        Parameters:
+        -----------
+        x: str. Header of the variable that will be plotted along the X axis.
+        y: str. Header of the variable that will be plotted along the Y axis.
+        z: str. Header of the variable that will be plotted along the Z axis.
+        size_var: str. Header of the variable that will be plotted along the size axis.
+        color_var: str. Header of the variable that will be plotted along the color axis.
+        better_view: bool. If True, the axes will be rotated so that the 2nd axis is up and the 3rd is forward.
+        '''
+
+        # Get the data for the variables `x`, `y`, `z`, `size_var`, and `color_var`
+        x_data = self.data.select_data([x])
+        y_data = self.data.select_data([y])
+        z_data = self.data.select_data([z])
+        size_data = self.data.select_data([size_var])
+        color_data = self.data.select_data([color_var])
+
+        # Create a figure and axes object
+        fig = plt.figure()
+        # Increase the size of the figure
+        fig.set_size_inches(10, 10)
+        ax = plt.axes(projection='3d')
+
+        # Scatter plot of data in 3D
+        ax.scatter3D(x_data, y_data, z_data, s=size_data, c=color_data)
+
+        # Set the labels of the axes
+        ax.set_xlabel(x)
+        ax.set_ylabel(y)
+        ax.set_zlabel(z)
+
+        # Set the title of the figure
+        ax.set_title(title)
+
+        # Adjust the layout of the figure
+        fig.subplots_adjust(right=0.8)
+        cb_ax = fig.add_axes([0.85, 0.15, 0.05, 0.7])
+        cb_ax.set_title(color_var)
+        fig.colorbar(ax.collections[0], cax=cb_ax)
+
+        # Show the figure
+        plt.show()
+
 
     def heatmap(self, headers=None, title=None, cmap="gray"):
         '''Generates a heatmap of the specified variables (defaults to all). Each variable is normalized
