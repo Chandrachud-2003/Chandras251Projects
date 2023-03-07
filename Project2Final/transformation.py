@@ -601,6 +601,64 @@ class Transformation(analysis.Analysis):
 
         return rotated_data
         
+    # Extension 3 - Implementing 2d rotation
+    def rotation_matrix_2d(self, degrees):
+        '''Make a 2-D homogeneous rotation matrix for rotating the projected data
+        about the origin.
+
+        Parameters:
+        -----------
+        degrees: float. Angle (in degrees) by which the projected dataset should be rotated.
+
+        Returns:
+        -----------
+        ndarray. shape=(3, 3). The 2D rotation matrix with homogenous coordinate.
+
+        NOTE: This method just creates the rotation matrix. It does NOT actually PERFORM the rotation!
+        '''
+
+        # Convert the degrees to radians
+        radians = np.radians(degrees)
+
+        # Create the rotation matrix
+        rotation_matrix = np.eye(3)
+
+        # Set the appropriate values in the rotation matrix
+        rotation_matrix[0,0] = np.cos(radians)
+        rotation_matrix[0,1] = -np.sin(radians)
+        rotation_matrix[1,0] = np.sin(radians)
+        rotation_matrix[1,1] = np.cos(radians)
+
+        return rotation_matrix
+    
+    # Extension 3 - Implementing 2d rotation
+    def rotate_2d(self, degrees):
+        '''Rotates the projected data about the origin by the angle (in degrees)
+        `degrees`.
+
+        Parameters:
+        -----------
+        degrees: float. Angle (in degrees) by which the projected dataset should be rotated.
+
+        Returns:
+        -----------
+        ndarray. shape=(N, num_proj_vars). The rotated data (with all variables in the projected).
+            dataset. NOTE: There should be NO homogenous coordinate!
+        '''
+
+        rotateTransform = np.array([np.cos(np.radians(degrees)), -np.sin(np.radians(degrees)), np.sin(np.radians(degrees)), np.cos(np.radians(degrees))]).reshape(2, 2)
+        data_array = self.get_data_homogeneous()
+        data_array = data_array[:, :-1]
+
+        rotatedData = (rotateTransform@data_array.T).T
+
+        headers = self.data.get_headers()
+        header2col = self.data.get_mappings()
+        new_data = data.Data(headers = headers, header2col = header2col, data = rotatedData)
+
+        self.data = new_data
+
+        return rotatedData
         
 
 
