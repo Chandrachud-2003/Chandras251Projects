@@ -80,33 +80,37 @@ class LinearRegression(analysis.Analysis):
         NOTE: Use other methods in this class where ever possible (do not write the same code twice!)
         '''
 
+        # Set instance variables for independent and dependent variables
         self.ind_vars = ind_vars
         self.dep_var = dep_var
 
-        # Extract independent and dependent variables from the data
-        X = self.data.select_data(self.ind_vars)
-        y = self.data.select_data([self.dep_var])
+        # Extract the independent and dependent variable data from the data object
+        x = self.data.select_data(ind_vars)
+        self.y = self.data.select_data([dep_var])
 
-        # Add a column of ones to X for the intercept term
-        X = np.insert(X, 0, 1, axis=1)
+        # Add a column of 1s for the intercept
+        self.A = np.hstack((np.ones((x.shape[0], 1)), x))
 
-        # Compute least squares solution using numpy.linalg.lstsq
-        self.A, res, rank, s = np.linalg.lstsq(X, y)
+        # Fit the regression and get the coefficients
+        c, _, _, _ = scipy.linalg.lstsq(self.A, self.y)
 
-        # Store slope and intercept coefficients
-        self.slope = self.A[1:].reshape(-1, 1)
-        self.intercept = self.A[0]
+        # Set the instance variables for the slope, intercept, and residuals
+        self.slope = c[1:]
+        self.intercept = c[0]
+        # Converting the intercept to a float
+        self.intercept = float(self.intercept)
 
-        # Store y
-        self.y = y
-
-        # Compute predicted values, R-squared, residuals, and mean squared error
-        y_pred = self.predict(X=X)
+        # Compute R^2 on the fit
+        y_pred = self.predict()
+        # Printing the shape of y_pred
         self.R2 = self.r_squared(y_pred)
-        self.residuals = self.compute_residuals(y_pred)
-        self.mse = self.compute_mse()
 
-        
+        # Compute the residuals
+        self.residuals = self.compute_residuals(y_pred)
+
+        # Setting the mse
+        self.mse = self.compute_mse()
+            
     def predict(self, X=None):
         '''Use fitted linear regression model to predict the values of data matrix self.A.
 
@@ -131,23 +135,27 @@ class LinearRegression(analysis.Analysis):
         # Generates the predictions y_pred = mA + b, where (m, b) are the model fit slope and intercept,
         # A is the data matrix.
 
-        # Use the proper dimensions so that the matrix multiplication works
-        # X = np.insert(X, 0, 1, axis=1)
-        # y_pred = np.matmul(X, self.A)
-        # return y_pred
-
         # If X is None, use self.A for the "x values" when making predictions.
-        sample_x = None
+        # If X is not None, use X as independent var data as "x values" used in making predictions.
         if X is None:
-            sample_x = self.A
-        
-        # If not None, use X as independent var data as "x values" used in making predictions.
+            X = self.A
         else:
-            sample_x = np.insert(X, 0, 1, axis=1)
+            X = np.hstack((np.ones((X.shape[0], 1)), X))
+
+
+        # 'Use fitted linear regression model to predict the values of data matrix self.A.
 
         # Generates the predictions y_pred = mA + b, where (m, b) are the model fit slope and intercept,
         # A is the data matrix.
-        y_pred = self.slope * sample_x + self.intercept
+
+        # Reshape intercept to have the same dimensions as slope
+        temp_intercept = np.reshape(self.intercept, (1, 1))
+
+        # Combine slope and intercept to get the c vector
+        c = np.vstack((temp_intercept, self.slope))
+        y_pred = np.dot(X, c)
+
+
         return y_pred
 
 
@@ -165,11 +173,9 @@ class LinearRegression(analysis.Analysis):
             The R^2 statistic
         '''
         
-        y_mean = np.mean(self.y)
-        SSR = np.sum((y_pred - y_mean)**2)
-        SSTO = np.sum((self.y - y_mean)**2)
-        R2 = SSR / SSTO
-        return R2
+        numerator = np.sum((self.y - y_pred) ** 2)
+        denominator = np.sum((self.y - np.mean(self.y)) ** 2)
+        return 1 - (numerator / denominator)
 
     def compute_residuals(self, y_pred):
         '''Determines the residual values from the linear regression model
@@ -186,8 +192,7 @@ class LinearRegression(analysis.Analysis):
             data samples
         '''
         
-        residuals = self.y - y_pred
-        return residuals
+        return self.y - y_pred
 
     def compute_mse(self):
         '''Computes the mean squared error in the predicted y compared the actual y values.
@@ -200,8 +205,11 @@ class LinearRegression(analysis.Analysis):
         Hint: Make use of self.compute_residuals
         '''
         
-        residuals = self.compute_residuals(self.predict())
-        mse = np.mean(residuals**2)
+        # This is the equation for the mean squared error
+        # **Equation for MSE:** $$E = \frac{1}{N}\sum_{i=1}^N \left (y_i - \hat{y}_i \right )^2$$
+        # where $N$ is the number of data samples, $y_i$ is the actual y value at the $i^{th}$ data sample,
+        # and $\hat{y}_i$ is the predicted y value at the $i^{th}$ data sample.
+        mse = np.sum(self.residuals ** 2) / self.residuals.shape[0]
         return mse
 
     def scatter(self, ind_var, dep_var, title):
@@ -237,10 +245,10 @@ class LinearRegression(analysis.Analysis):
         x_reg = np.linspace(np.min(x), np.max(x), 100)
 
         # Use your regression slope, intercept, and x sample points to solve for the y values on the regression line.
-        y_reg = self.slope * x_reg + self.intercept
+        y_reg = self.slope * x_reg + np.full_like(x_reg, self.intercept)
 
         # Plot the line on top of the scatterplot.
-        plt.plot(x_reg, y_reg, color='red')
+        plt.plot(x_reg, y_reg.flatten(), color='red')
 
         # Make sure that your plot has a title (with R^2 value in it)
         plt.title(title + ' R^2 = ' + str(self.r_squared(self.predict())))
