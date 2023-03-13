@@ -250,8 +250,11 @@ class LinearRegression(analysis.Analysis):
         # Plot the line on top of the scatterplot.
         plt.plot(x_reg, y_reg.flatten(), color='red')
 
+        # Calculate the R^2 value
+        r_squared = self.r_squared(self.predict())
+
         # Make sure that your plot has a title (with R^2 value in it)
-        plt.title(title + ' R^2 = ' + str(self.r_squared(self.predict())))
+        plt.title(title + ' R^2 = ' + str(r_squared))
 
         plt.show()
 
@@ -277,12 +280,7 @@ class LinearRegression(analysis.Analysis):
         every ind and dep variable pair.
         - Make sure that each plot has a title (with R^2 value in it)
         '''
-        
-        # Makes a pair plot with regression lines in each panel.
-        # There should be a len(data_vars) x len(data_vars) grid of plots, show all variable pairs
-        # on x and y axes.
 
-        # Importing Analysis class
         from analysis import Analysis
 
         # Creating an analysis object
@@ -291,25 +289,57 @@ class LinearRegression(analysis.Analysis):
         # Use your pair_plot() in Analysis to take care of making the grid of scatter plots.
         # Note that this method returns the figure and axes array that you will need to superimpose
         # the regression lines on each subplot panel.
-        fig, ax = analysis.pair_plot(data_vars, fig_sz, hists_on_diag)
+        fig, ax = analysis.pair_plot(data_vars, fig_sz, title = 'Pair Plot')
 
-        # In each subpanel, plot a regression line of the ind and dep variable. Follow the approach that you used for self.scatter. Note that here you will need to fit a new regression for every ind and dep variable pair.
+        # Looping through the data variables
         for i in range(len(data_vars)):
             for j in range(len(data_vars)):
-                if i != j:
-                    # Sample evenly spaced x values for the regression line between the min and max x data values
-                    x_reg = np.linspace(np.min(ax[i, j].get_xlim()), np.max(ax[i, j].get_xlim()), 100)
+                # Getting the independent and dependent variables
+                ind_var = data_vars[i]
+                dep_var = data_vars[j]
 
-                    # Use your regression slope, intercept, and x sample points to solve for the y values on the regression line.
-                    y_reg = self.slope * x_reg + self.intercept
+                # Getting the x and y values
+                x = self.data.select_data([ind_var]).flatten()
+                y = self.data.select_data([dep_var]).flatten()
 
-                    # Plot the line on top of the scatterplot.
-                    ax[i, j].plot(x_reg, y_reg, color='red')
+                # Sample evenly spaced x values for the regression line between the min and max x data values
+                x_reg = np.linspace(np.min(x), np.max(x), 100)
 
-                    # Make sure that your plot has a title (with R^2 value in it)
-                    ax[i, j].set_title(data_vars[i] + ' vs ' + data_vars[j] + ' R^2 = ' + str(self.r_squared(self.predict())))
+                # Calling the linear regression method to get the slope and intercept
+                self.linear_regression([ind_var], dep_var)
+
+                # Use your regression slope, intercept, and x sample points to solve for the y values on the regression line.
+                y_reg = self.slope * x_reg + np.full_like(x_reg, self.intercept)
+
+                # Check if hists_on_diag is true
+                if hists_on_diag and i == j:
+                    numVars = len(data_vars)
+                    ax[i, j].remove()
+                    ax[i, j] = fig.add_subplot(numVars, numVars, i*numVars+j+1)
+                    if j < numVars-1:
+                        ax[i, j].set_xticks([])
+                    else:
+                        ax[i, j].set_xlabel(data_vars[i])
+                    if i > 0:
+                        ax[i, j].set_yticks([])
+                    else:
+                        ax[i, j].set_ylabel(data_vars[i])
+                    # Plot the histogram on the diagonal
+                    ax[i, j].hist(x, bins=20)
+                else:
+                    # Plot the line on top of the scatterplot subplot panel.
+                    ax[i, j].plot(x_reg, y_reg.flatten(), color='red')
+
+                # Calculate the R^2 value
+                r_squared = self.r_squared(self.predict())
+
+                # Make sure that your plot has a title (with R^2 value in it) make the title small so its fits above the plot
+                ax[i, j].set_title(ind_var + ' vs ' + dep_var + ' R^2 = ' + str(r_squared), fontsize=8)
 
         plt.show()
+
+
+
 
     def make_polynomial_matrix(self, A, p):
         '''Takes an independent variable data column vector `A and transforms it into a matrix appropriate
