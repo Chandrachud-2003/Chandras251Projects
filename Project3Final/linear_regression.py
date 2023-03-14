@@ -360,7 +360,6 @@ class LinearRegression(analysis.Analysis):
         NOTE: There should not be a intercept term ("x^0"), the linear regression solver method
         should take care of that.
         '''
-
         # Initialize matrix to hold polynomial features of A
         X = np.zeros((A.shape[0], p))
 
@@ -392,7 +391,38 @@ class LinearRegression(analysis.Analysis):
             appropriate for polynomial regresssion. Do this with self.make_polynomial_matrix.
             - You set the instance variable for the polynomial regression degree (self.p)
         '''
-        pass
+        # Set instance variables for independent and dependent variables
+        self.ind_vars = [ind_var]
+        self.dep_var = dep_var
+
+        # Extract the independent and dependent variable data from the data object
+        A = self.data.select_data([ind_var])
+        self.y = self.data.select_data([dep_var])
+
+        # Make the polynomial matrix
+        self.A = self.make_polynomial_matrix(A, p)
+        
+        # Set the instance variable for the polynomial regression degree
+        self.p = p
+
+        # Fit the regression and get the coefficients
+        c, _, _, _ = scipy.linalg.lstsq(self.A, self.y)
+
+        # Set the instance variables for the slope, intercept, and residuals
+        self.slope = c[1:]
+        self.intercept = c[0]
+        # Converting the intercept to a float
+        self.intercept = float(self.intercept)
+
+        # Compute R^2 on the fit
+        y_pred = self.predict()
+        self.R2 = self.r_squared(y_pred)
+
+        # Compute the residuals
+        self.residuals = self.compute_residuals(y_pred)
+
+        # Setting the mse
+        self.mse = self.compute_mse()
 
     def get_fitted_slope(self):
         '''Returns the fitted regression slope.
