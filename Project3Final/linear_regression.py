@@ -57,7 +57,7 @@ class LinearRegression(analysis.Analysis):
         # p: int. Polynomial degree of regression model (Week 2)
         self.p = 1
 
-    def linear_regression(self, ind_vars, dep_var, p=1):
+    def linear_regression(self, ind_vars, dep_var, p=1, isNormal = False):
         '''Performs a linear regression or polynomical regression on the independent (predictor) variable(s) `ind_vars`
         and dependent variable `dep_var.
 
@@ -107,11 +107,13 @@ class LinearRegression(analysis.Analysis):
 
         else:
             A2 = np.hstack((np.ones((N,1)),self.make_polynomial_matrix(self.A, self.p)))
-
-        c, _, _, _ = scipy.linalg.lstsq(A2, self.y)
-
-        # Solve the least squares problem y = Ac for the vector c of regression fit coefficients
-        c, _, _, _ = scipy.linalg.lstsq(A2, self.y)
+            
+        if isNormal:
+            # Solve the least squares problem y = Ac for the vector c of regression fit coefficients using normal equations
+            c = np.linalg.inv(A2.T @ A2) @ A2.T @ self.y
+        else:
+            # Solve the least squares problem y = Ac for the vector c of regression fit coefficients using lstsq
+            c, _, _, _ = scipy.linalg.lstsq(A2, self.y)
 
         # Getting the slope and intercept from the vector c
         self.slope = c[1:, :]
@@ -127,7 +129,69 @@ class LinearRegression(analysis.Analysis):
 
         # Setting the mse
         self.mse = self.compute_mse()
-        
+
+    def stepwise_linear_regression(self, ind_vars, dep_var):
+        self.ind_vars = ind_vars
+        self.dep_var = dep_var
+
+        # Select the independent variables from the data object
+        A = self.data.select_data(ind_vars)
+
+        # Select the dependent variable from the data object
+        y = self.data.select_data([dep_var])
+
+        # Create a list of all variables available for the stepwise regression
+        available_vars = list(ind_vars)
+
+        # Initialize the set of variables in the model as empty
+        included_vars = []
+
+        # Initialize the model with just the first variable
+        model = LinearRegression(self.data)
+        model.linear_regression([available_vars[0]], dep_var)
+
+        # Initialize the best R^2 value to zero
+        best_R2 = 0
+
+        # Loop until all available variables have been included in the model
+        while len(available_vars) > 0:
+
+            # Initialize the variable to add as None and the R^2 improvement to zero
+            var_to_add = None
+            R2_improvement = 0
+
+            # Loop over all available variables and find the one that results in the largest increase in adjusted R^2
+            for var in available_vars:
+                temp_model = LinearRegression(self.data)
+                temp_model.linear_regression(included_vars + [var], dep_var)
+
+                # Calculate the adjusted R^2 for the temporary model
+                temp_R2 = temp_model.R2 - (len(included_vars) + 1) / (len(y) - len(included_vars) - 1) * (1 - temp_model.R2)
+
+                # Check if the adjusted R^2 for the temporary model is better than the best so far
+                if temp_R2 > best_R2:
+                    var_to_add = var
+                    R2_improvement = temp_R2 - best_R2
+                    best_R2 = temp_R2
+
+            # Add the variable that results in the largest increase in adjusted R^2 to the model
+            if var_to_add is not None:
+                included_vars.append(var_to_add)
+                available_vars.remove(var_to_add)
+                model = LinearRegression(self.data)
+                model.linear_regression(included_vars, dep_var)
+
+                # Print some information about the added variable and the R^2 improvement
+                print(f"Added variable: {var_to_add}. Adjusted R^2 increased by {R2_improvement:.3f}.")
+            else:
+                break
+
+        # Set the attributes of the current object to match the final model
+        self.slope = model.slope
+        self.intercept = model.intercept
+        self.R2 = model.R2
+        self.residuals = model.residuals
+        self.mse = model.mse
 
     def make_polynomial_matrix(self, A, p):
         
@@ -245,7 +309,52 @@ class LinearRegression(analysis.Analysis):
         mse = np.sum(self.residuals ** 2) / self.residuals.shape[0]
         return mse
 
-    def scatter(self, ind_var, dep_var, title):
+    # def scatter(self, ind_var, dep_var, title):
+    #     '''Creates a scatter plot with a regression line to visualize the model fit.
+    #     Assumes linear regression has been already run.
+
+    #     Parameters:
+    #     -----------
+    #     ind_var: string. Independent variable name
+    #     dep_var: string. Dependent variable name
+    #     title: string. Title for the plot
+
+    #     TODO:
+    #     - Use your scatter() in Analysis to handle the plotting of points. Note that it returns
+    #     the (x, y) coordinates of the points.
+    #     - Sample evenly spaced x values for the regression line between the min and max x data values
+    #     - Use your regression slope, intercept, and x sample points to solve for the y values on the
+    #     regression line.
+    #     - Plot the line on top of the scatterplot.
+    #     - Make sure that your plot has a title (with R^2 value in it)
+    #     - If self.p > 1, generalize the plotted regression line to a regression polynomial by getting your polynomial "x" and "y" values and plotting the polynomial line on top of the scatterplot.
+
+    #     '''
+
+    #     # Check if self.r2 is None. If so, raise an error.
+    #     if self.R2 is not None:
+    #         title = title + str(f" - R2 = {self.r_squared(self.predict())}")
+        
+    #     x, y = super().scatter(ind_var, dep_var, title)
+
+    #     if self.p == 1:
+    #         if self.slope is not None:
+    #             x_reg = np.linspace(np.squeeze(x).min(), np.squeeze(x).max(), 100)
+    #             y_reg = np.squeeze(self.slope)*x_reg + self.intercept
+    #             plt.plot(x_reg, y_reg, color='red')
+    #     else:
+    #         A2 = self.make_polynomial_matrix(x, self.p)
+
+    #         xline = np.linspace(np.squeeze(x).min(), np.squeeze(x).max(), 100)
+    #         y_reg = self.intercept + self.slope[0]*xline
+    #         for i in range(self.slope.shape[0]-1):
+    #             y_reg += self.slope[i+1]*xline**(i+2)
+
+    #         plt.plot(xline, y_reg, color='red')
+
+    #     plt.show()
+
+    def scatter(self, ind_var, dep_var, title, display_ci=False):
         '''Creates a scatter plot with a regression line to visualize the model fit.
         Assumes linear regression has been already run.
 
@@ -254,6 +363,7 @@ class LinearRegression(analysis.Analysis):
         ind_var: string. Independent variable name
         dep_var: string. Dependent variable name
         title: string. Title for the plot
+        display_ci: boolean. Whether or not to display 95% confidence intervals on the regression line
 
         TODO:
         - Use your scatter() in Analysis to handle the plotting of points. Note that it returns
@@ -270,7 +380,7 @@ class LinearRegression(analysis.Analysis):
         # Check if self.r2 is None. If so, raise an error.
         if self.R2 is not None:
             title = title + str(f" - R2 = {self.r_squared(self.predict())}")
-        
+
         x, y = super().scatter(ind_var, dep_var, title)
 
         if self.p == 1:
@@ -278,6 +388,19 @@ class LinearRegression(analysis.Analysis):
                 x_reg = np.linspace(np.squeeze(x).min(), np.squeeze(x).max(), 100)
                 y_reg = np.squeeze(self.slope)*x_reg + self.intercept
                 plt.plot(x_reg, y_reg, color='red')
+                
+                # Display 95% confidence intervals on the regression line
+                if display_ci:
+                    from scipy.stats import t
+                    n = len(x)
+                    x_mean = np.mean(x)
+                    s_err = np.sqrt(np.sum((y - self.predict())**2) / (n-self.p-1))
+                    conf_interval = t.interval(0.95, n-self.p-1, loc=0, scale=s_err)
+                    y_upper = y_reg + abs(conf_interval[1])
+                    y_lower = y_reg - abs(conf_interval[1])
+                    plt.fill_between(x_reg, y_lower, y_upper, color='grey', alpha=0.4)
+            else:
+                print("Can't plot regression line as slope is None")
         else:
             A2 = self.make_polynomial_matrix(x, self.p)
 
@@ -287,8 +410,23 @@ class LinearRegression(analysis.Analysis):
                 y_reg += self.slope[i+1]*xline**(i+2)
 
             plt.plot(xline, y_reg, color='red')
+            
+            # Display 95% confidence intervals on the regression line
+            if display_ci:
+                from scipy.stats import t
+                n = len(x)
+                x_mean = np.mean(x)
+                s_err = np.sqrt(np.sum((y - self.predict())**2) / (n-self.p-1))
+                conf_interval = t.interval(0.95, n-self.p-1, loc=y_reg, scale=s_err)
+                y_upper = conf_interval[1]
+                y_lower = conf_interval[0]
+                plt.fill_between(x_reg, y_lower, y_upper, color='grey', alpha=0.4)
 
+        plt.xlabel(ind_var)
+        plt.ylabel(dep_var)
+        plt.title(title)
         plt.show()
+
             
     def pair_plot(self, data_vars, fig_sz=(12, 12), hists_on_diag=True):
         '''Makes a pair plot with regression lines in each panel.
